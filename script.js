@@ -1,4 +1,5 @@
 // --- SELECTORES DE ELEMENTOS ---
+
 const palavraInput = document.getElementById("palavra-input")
 const listaPalavras = document.getElementById("lista_palavras")
 const revisoesContainer = document.getElementById("revisoesContainer")
@@ -7,12 +8,10 @@ const output = document.getElementById("jsonOutput")
 const copyBtn = document.getElementById("copyJsonBtn")
 const gerarPdfBtn = document.getElementById("gerarPdfBtn")
 
-
 let palavras = [];
 
 // --- FUNÇÕES DE MANIPULAÇÃO DO FORMULÁRIO ---
-
-//
+// Adiciona palavras-chaves ao pressionar Enter
 palavraInput.addEventListener("keypress", e => {
     if(e.key === "Enter"){
         e.preventDefault();
@@ -82,22 +81,7 @@ function construirDocumento(){
     return document;
 }
 
-// --- LÓGICA DE GERAÇÃO (JSON E PDF) ---
-// Evento para gerar o documento JSON no formato MongoDB
-form.addEventListener("submit", e =>{
-    e.preventDefault();
-    const documento = construirDocumento();
 
-    // Cria uma cópia do objeto para formatar as datas para o mongoDB
-    const documentoMongo = JSON.parse(JSON.stringify(documento));
-    documentoMongo.data_envio = {"$date": documento.data_envio};
-    documentoMongo.revisoes.forEach(rev => {
-        rev.data = { "$date": rev.data };
-    });
-
-    //Exibe o JSON formatado na tela
-    output.textContent = JSON.stringify(documentoMongo, null, 2);
-});
 
 // Evento para o botão de gerar o relatório em PDF
 gerarPdfBtn.addEventListener("click", () =>{
@@ -131,7 +115,113 @@ gerarPdfBtn.addEventListener("click", () =>{
     // Seção do Responsável
     pdf.setFontSize(14);
     pdf.text("Responsável", 20, y);
-    y+=7;
+    y += 7;
     pdf.setFontSize(12);
     pdf.text(`- Nome: ${doc.responsavel.nome}`, 25, y);
-})
+    y += 7;
+    pdf.text(`- Cargo: ${doc.responsavel.cargo}`, 25, y);
+    y += 7;
+    pdf.text(`- Departamento: ${doc.responsavel.cargo}`, 25, y);
+    y += 15;
+
+    // Seção de Palavras-chave
+    pdf.setFontSize(14);
+    pdf.text("Palavras-chave", 20, y);
+    y += 7;
+    pdf.setFontSize(12);
+    pdf.text(doc.palavras_chaves.join(', '), 25, y);
+    y += 15;
+
+    // Seção de Revisão com quebra de linha automática
+    pdf.setFontSize(14);
+    pdf.text("Revisões", 20, y);
+    y += 7;
+    pdf.setFontSize(12);
+
+    if(doc.revisoes.length > 0){
+        doc.revisoes.forEach((rev, index) => {
+            if(index > 0) y += 5;
+
+            pdf.text(` Revisão ${index + 1}:`, 25, y);
+            y += 7;
+            pdf.text(`- Data; ${new Date(rev.data).toLocaleString('pt-BR')}`, 30, y);
+            y += 7;
+            pdf.text(`- Revisor; ${rev.revisado_por}`, 30, y);
+            y += 7;
+
+            // Lógica de quebra de linha para o comentário
+            const maxWidth = 165; // Largura máxima do texto na página
+            const comentarioLines = pdf.splitTextToSize(`- Comentário: ${rev.comentario}`, maxWidth);
+
+            pdf.text(comentarioLines, 30, y);
+
+            // Atualiza a posição 'y' com base na quantidade de linhas do comentário
+            y += (comentarioLines.length * 5) + 5;
+        });
+    } else {
+        pdf.text("nenhuma revisão adicionada.", 25, y);
+    }
+
+    // Inicia o download do arquivo PDF gerado
+    pdf.save(`${doc.titulo.replace(/ /g, '_')}.pdf`)
+});
+
+// --- FUNÇÃO DE COPIAR JSON ---
+copyBtn.addEventListener("click", () => {
+    const texttoParaCopiar = output.textContent;
+
+    if(texttoParaCopiar.trim() === ""){
+        alert("Gere um documento primeiro para poder copiar!");
+        return;
+    }
+
+    navigator.clipboard.writeText(texttoParaCopiar).then(() =>{
+        const textoOriginal = copyBtn.textContent;
+        copyBtn.textContent = "✅ Copiado!";
+        setTimeout(() =>{
+            copyBtn.textContent = textoOriginal;
+        }, 2000);
+    }).catch(err => {
+        console.error("Falha ao copiar o texto: ", err);
+        alert("Ocorreu um erro ao tentar copiar.");
+    });
+});
+
+// Gera JSON e envia para o back-end ao submeter o formulário
+form.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    // 1. Constrói o objeto do documento com antes
+    const documeno = construirDocumento();
+
+    // 2. Exibe o JSON na tela (para manter)
+    const documentoMongo = JSON.parse(JSON.stringify(documento));
+    documentoMongo.data_envio = {"$date": documento.data_envio};
+    documentoMongo.revisoes.forEach(rev => {
+        rev.data = {"$date":rev.data};
+    });
+    output.textContent = JSON.stringify(documentoMongo, null, 2);
+
+    // 3. --- Enviar os dados para o back-end---
+    try{
+        const response = await fetch('http://localhost:3000/salvar-relatorio', {
+            method: 'POST',
+            headers: {
+                'Content-type':'aplication/json',
+            },
+            // Enviamos o objeto 'documento' original, sem o formato "$date"
+            body: JSON.stringify(documento),
+        });
+
+        const result = await response.json();
+
+        if(response.ok){
+            alert('Relatório salvo no banco de dados com sucesso!');
+        } else {
+            alert('Falha ao salvar no bancode dados: '+ result.message);
+        }
+    }catch(error){
+        console.error('Erro na comunicação  com o servidor: ',error);
+        alert('Não foi possível conectar ao servidor. Verifique se Back-end está rodando.')
+    }
+});
