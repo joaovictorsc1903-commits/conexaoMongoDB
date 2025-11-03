@@ -1,5 +1,5 @@
 /* style */
-@import url('https://fonts.googleleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
 
 body{
     font-family: 'Poppins', sans-serif;
@@ -17,7 +17,7 @@ h1{
 }
 
 form{
-    background-color: white;
+    background: white;
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
@@ -47,7 +47,7 @@ input, select{
     border: 1px solid #bbb;
     border-radius: 8px;
     margin-top: 5px;
-    box-sizing: border-box; /* Adicione esta linha para corrigir o alinhamento */
+    box-sizing:border-box; /* Adicione esta linha para corrigir o alinhamento */
 }
 
 #lista_palavras{
@@ -79,7 +79,7 @@ input, select{
     border-radius: 8px;
     cursor: pointer;
     margin-top: 10px;
-    transition: 0.3;
+    transition: 0.3s;
 }
 
 #addRevisao:hover{
@@ -95,7 +95,7 @@ input, select{
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: 0.3;
+    transition: 0.3s;
 }
 
 .gerarBtn:hover{
@@ -161,7 +161,7 @@ input, select{
     border: none;
     border-radius: 10px;
     cursor: pointer;
-    transition: 0.3;
+    transition: 0.3s;
 }
 
 .pdfBtn:hover{
